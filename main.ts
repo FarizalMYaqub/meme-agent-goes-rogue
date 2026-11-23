@@ -8,7 +8,7 @@
 // Node 22, standard library only, no network. Run locally with:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { copyFileSync, mkdirSync, statSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const source = new URL('./entry.png', import.meta.url);
@@ -25,5 +25,14 @@ const sourceBytes = statSync(source).size;
 const targetBytes = statSync(target).size;
 if (sourceBytes !== targetBytes) {
   throw new Error(`entry.png copy mismatch: ${targetBytes} of ${sourceBytes} bytes`);
+}
+
+// The entry is a JPEG stored as entry.png (the gate accepts a whole
+// PNG or JPEG at that path): refuse to hand the judge anything that
+// does not start with the JPEG magic bytes, so a failed render or a
+// truncated download can never pass as the entry.
+const head = readFileSync(target).subarray(0, 2);
+if (head[0] !== 0xff || head[1] !== 0xd8) {
+  throw new Error('entry.png is not a JPEG image');
 }
 console.log(`wrote ${target} (${targetBytes} bytes)`);
